@@ -1,0 +1,48 @@
+name: Custom CodeQL WebView Scan
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  analyze:
+    name: Analyze java code with custom WebView query
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'java' ]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    # Use configuration file approach instead of pack dependencies
+    - name: Create CodeQL configuration
+      run: |
+        mkdir -p .github/codeql
+        cat > .github/codeql/codeql-config.yml << 'EOF'
+        name: "Custom WebView Analysis"
+        queries:
+          - uses: security-extended
+          - name: Custom WebView queries
+            uses: ./codeql/custom-java/queries
+        EOF
+        echo "Configuration file created"
+    
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+        config-file: ./.github/codeql/codeql-config.yml
+    
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
+    
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
