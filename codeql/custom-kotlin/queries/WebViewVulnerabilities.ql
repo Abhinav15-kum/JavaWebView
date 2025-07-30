@@ -1,15 +1,13 @@
 /**
- * @name Detect risky WebView configurations in Android apps
- * @description Finds Android WebView usage that enables JavaScript or loads URLs insecurely.
+ * @name Detect risky WebView usage in Java Android apps
+ * @description Finds WebView.loadUrl calls with hardcoded URLs and JavaScript enabling
  * @kind problem
  * @language java
- * @id java/android/webview/insecure-usage
  */
 
 import java
-import semmle.code.java.dataflow.TaintTracking
 
-// Find calls to WebView.loadUrl with a hardcoded string URL
+// Detect calls to WebView.loadUrl
 class WebViewLoadUrlCall extends MethodCall {
   WebViewLoadUrlCall() {
     this.getMethod().hasName("loadUrl") and
@@ -17,27 +15,14 @@ class WebViewLoadUrlCall extends MethodCall {
   }
 }
 
-// Find calls to enable JavaScript: webSettings.javaScriptEnabled = true
+// Detect assignments enabling JavaScript on WebSettings
 class JavaScriptEnabled extends Expr {
   JavaScriptEnabled() {
     exists(AssignExpr assign |
-      assign.getLValue() instanceof FieldAccess fa and
+      assign.getTarget() instanceof FieldAccess fa and
       fa.getField().hasName("javaScriptEnabled") and
-      assign.getRValue() instanceof BooleanLiteralExpr ble and
+      assign.getValue() instanceof BooleanLiteralExpr ble and
       ble.getValue() = true and
-      assign = this
-    )
-  }
-}
-
-// Find WebViewClient instantiations assigned to WebView.webViewClient property
-class WebViewClientAssigned extends Expr {
-  WebViewClientAssigned() {
-    exists(AssignExpr assign |
-      assign.getLValue() instanceof FieldAccess fa and
-      fa.getField().hasName("webViewClient") and
-      assign.getRValue() instanceof NewExpr ne and
-      ne.getType().hasQualifiedName("android.webkit", "WebViewClient") and
       assign = this
     )
   }
@@ -51,6 +36,3 @@ select call, "WebView.loadUrl called with a hardcoded URL."
 
 from JavaScriptEnabled js
 select js, "JavaScript is enabled on WebView. This can be risky if loading untrusted content."
-
-from WebViewClientAssigned wvc
-select wvc, "Custom WebViewClient assigned, make sure it's configured securely (e.g., override shouldOverrideUrlLoading)."
