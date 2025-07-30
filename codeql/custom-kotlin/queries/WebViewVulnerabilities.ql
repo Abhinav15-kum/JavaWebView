@@ -1,38 +1,33 @@
 /**
- * @name Detect risky WebView usage in Java Android apps
- * @description Finds WebView.loadUrl calls with hardcoded URLs and JavaScript enabling
+ * @name Detect insecure WebView usage in Android apps
+ * @description Detects hardcoded URLs in WebView.loadUrl() and enabling of JavaScript.
  * @kind problem
  * @language java
+ * @id java/android/webview/insecure-usage
  */
 
 import java
+import semmle.code.java.dataflow.TaintTracking
 
-// Detect calls to WebView.loadUrl
-class WebViewLoadUrlCall extends MethodCall {
-  WebViewLoadUrlCall() {
-    this.getMethod().hasName("loadUrl") and
-    this.getMethod().getDeclaringType().hasQualifiedName("android.webkit", "WebView")
-  }
-}
-
-// Detect assignments enabling JavaScript on WebSettings
-class JavaScriptEnabled extends Expr {
-  JavaScriptEnabled() {
-    exists(AssignExpr assign |
-      assign.getTarget() instanceof FieldAccess fa and
-      fa.getField().hasName("javaScriptEnabled") and
-      assign.getValue() instanceof BooleanLiteralExpr ble and
-      ble.getValue() = true and
-      assign = this
-    )
-  }
-}
-
-from WebViewLoadUrlCall call, Expr urlArg
+/**
+ * Matches WebView.loadUrl("hardcoded") calls
+ */
+from MethodAccess call, Expr urlArg
 where
+  call.getMethod().hasName("loadUrl") and
+  call.getMethod().getDeclaringType().hasQualifiedName("android.webkit", "WebView") and
   urlArg = call.getArgument(0) and
-  urlArg instanceof LiteralExpr
-select call, "WebView.loadUrl called with a hardcoded URL."
+  urlArg instanceof LiteralExpr and
+  urlArg.getType().getName() = "java.lang.String"
+select call, "WebView.loadUrl is called with a hardcoded URL."
 
-from JavaScriptEnabled js
-select js, "JavaScript is enabled on WebView. This can be risky if loading untrusted content."
+/**
+ * Matches webSettings.javaScriptEnabled = true
+ */
+from AssignExpr assign, FieldAccess fa, BooleanLiteralExpr ble
+where
+  assign.getTarget() = fa and
+  fa.getField().hasName("javaScriptEnabled") and
+  assign.getValue() = ble and
+  ble.getValue()
+select assign, "JavaScript is enabled on a WebView. This can be dangerous if content is untrusted."
