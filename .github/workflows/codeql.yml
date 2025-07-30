@@ -7,7 +7,7 @@ on:
 
 jobs:
   analyze:
-    name: Analyze Kotlin code with custom WebView query
+    name: Analyze java code with custom WebView query
     runs-on: ubuntu-latest
     permissions:
       actions: read
