@@ -7,7 +7,7 @@ on:
 
 jobs:
   analyze:
-    name: Analyze java code with custom WebView query
+    name: Analyze Kotlin code with custom WebView query
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -31,7 +31,7 @@ jobs:
         queries:
           - uses: security-extended
           - name: Custom WebView queries
-            uses: ./codeql/custom-java/queries
+            uses: ./codeql/custom-kotlin/queries
         EOF
         echo "Configuration file created"
     
